@@ -1,6 +1,8 @@
 import cv2 
 import numpy as np
 from matplotlib import pyplot as plt
+from skimage import exposure
+from skimage.exposure import match_histograms
 import json
 import os
 from utils import *
@@ -54,7 +56,13 @@ def crop(image, width=None, height=None):
     return crop_image
 
 def histogram_matching(image,pattern):
-    return None
+    image = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+    pattern = cv2.cvtColor(pattern,cv2.COLOR_BGR2RGB)
+    matched = match_histograms(image, pattern ,
+                           multichannel=True)
+    plt.imshow(matched)
+    plt.show()
+    return matched
 
 def rotation_matching(image,pattern):
     return None
@@ -97,7 +105,9 @@ if __name__ == "__main__":
     print(f"json label: {data}\n\nimage shape: {img.shape}\n\npattern shape: {pattern.shape}")
     
     # test crop
-    crop(img)
-        
+    img = crop(img)
+
+    # test historgam matching 
+    histogram_matching(img,pattern)    
     # predict()
 
