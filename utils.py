@@ -26,7 +26,7 @@ def opening(image,kernel):
     return(erode)
 
 def crop_out(im, vertices, size=None):
-    if size is None:
+    if size is None :
         width, height = im.shape[1]-1 , im.shape[0]-1
     else:
         width, height = size

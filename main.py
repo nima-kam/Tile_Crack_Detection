@@ -44,7 +44,11 @@ def crop(image, width=None, height=None):
     plt.show()
     
     if len(vertices) ==4:
-        crop_image=crop_out(image,vertices=vertices)
+        if width is None or height is None:
+            size = None 
+        else:
+            size = (width, height)
+        crop_image=crop_out(image,vertices=vertices,size=size)
     imshow(crop_image)    
 
     return crop_image
