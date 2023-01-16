@@ -25,6 +25,15 @@ def opening(image,kernel):
     erode=cv2.erode(dialect,kernel=kernel,iterations=1,borderType=cv2.BORDER_REPLICATE)
     return(erode)
 
+def crop_out(im, vertices, size=None):
+    if size is None:
+        width, height = im.shape[1]-1 , im.shape[0]-1
+    else:
+        width, height = size
+    target = np.array([[0,0],[0,height],[width,height],[width,0]])
+    transform = cv2.getPerspectiveTransform(vertices.astype(np.float32), target.astype(np.float32))  # get the top or bird eye view effect
+    return cv2.warpPerspective(src=im,M= transform,dsize= (width, height))
+
 def to_edges(im,lower=40,upper=150):
     """
     Return edges using Canny edge detector

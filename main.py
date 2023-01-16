@@ -20,29 +20,34 @@ constants ={
 def crop(image, width=None, height=None):
 
     grayscale = to_grayscale(image)
-    imshow(grayscale)  
+    # imshow(grayscale)  
     blurred = blur(grayscale,9)
     # imshow(blurred)
     # edges = to_edges(blurred,40,100)      
     # imshow(edges)  
 
     bi = to_binary(blurred,otsu=False,thresh=120)# threshold should be dynamic
-    imshow(bi)  
+    # imshow(bi)  
 
     kernel = cv2.getStructuringElement(
     cv2.MORPH_ELLIPSE,(7,7)
     )
     op = opening(bi,kernel)    
-    imshow(op)  
+    # imshow(op)  
 
     vertices = find_vertices(op).squeeze()
+
 
     # visualize the result
     imshow(image,False)    
     plt.scatter([x for x, y in vertices], [y for x, y in vertices])
     plt.show()
+    
+    if len(vertices) ==4:
+        crop_image=crop_out(image,vertices=vertices)
+    imshow(crop_image)    
 
-    return None
+    return crop_image
 
 def histogram_matching(image,pattern):
     return None
