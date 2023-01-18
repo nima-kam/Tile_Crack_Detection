@@ -6,6 +6,7 @@ from skimage.exposure import match_histograms
 import json
 import os
 from utils import *
+from scipy import ndimage
 
 # enable pyplot interactive mode for showing images
 # plt.ion()
@@ -65,7 +66,34 @@ def histogram_matching(image,pattern):
     return matched
 
 def rotation_matching(image,pattern):
-    return None
+    # resize image to pattern dimensions
+    resized = cv2.resize(image, (pattern.shape[0] , pattern.shape[1]), interpolation = cv2.INTER_AREA)
+
+    h, w , d = resized.shape
+    rotation_theta = 0
+
+    diff = cv2.subtract(resized, pattern)
+    min_error = np.sum(np.abs(diff))
+
+    # for each rotation ( theta ) possible ...
+    for i in range(0,359,90):
+        # now subtract the image from the pattern ....
+        # calculate the error with this angle ...
+        diff = cv2.subtract(resized, pattern)
+        err = np.sum(np.abs(diff))
+
+        if err < min_error :
+            min_error = err
+            rotation_theta = i
+     
+    
+    # print mse and rotation angle
+    print(f"mse between image and its pattern {min_error} and theta ( rotation angle ) : {rotation_theta}")
+
+
+    #rotation angle in degree
+    image = ndimage.rotate(image, rotation_theta)
+    return image
 
 def binary_threshold(image):
     return None
@@ -107,7 +135,11 @@ if __name__ == "__main__":
     # test crop
     img = crop(img)
 
+    
     # test historgam matching 
-    histogram_matching(img,pattern)    
+    matched = histogram_matching(img,pattern)   
+
+    # rotated ...
+    rotated = rotation_matching(matched,pattern) 
     # predict()
 
