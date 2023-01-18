@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage import exposure
 from skimage.exposure import match_histograms
+from skimage.feature import local_binary_pattern
 import json
 import os
 from utils import *
@@ -14,7 +15,7 @@ from scipy import ndimage
 constants ={
     "image_size":(1200,1200),
     "image_folder":"images/",
-    "label_name":"1644437322.3866885",
+    "label_name":"test_img",
     "kernel_size":9,
     'pattern_name':"AYLIN.tif",
     
@@ -57,7 +58,7 @@ def crop(image, width=None, height=None):
     return crop_image
 
 def histogram_matching(image,pattern):
-    image = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+    image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
     pattern = cv2.cvtColor(pattern,cv2.COLOR_BGR2RGB)
     matched = match_histograms(image, pattern ,
                            multichannel=True)
@@ -66,37 +67,60 @@ def histogram_matching(image,pattern):
     return matched
 
 def rotation_matching(image,pattern):
+    pattern = cv2.cvtColor(pattern,cv2.COLOR_BGR2RGB)
+    pattern = pattern.astype(float)
+
     # resize image to pattern dimensions
-    resized = cv2.resize(image, (pattern.shape[0] , pattern.shape[1]), interpolation = cv2.INTER_AREA)
+    minimum = np.min([image.shape[1] , image.shape[0]])
+    resized_pattern = cv2.resize(pattern, (minimum , minimum), interpolation = cv2.INTER_AREA).astype(float)
+    image = cv2.resize(image, (minimum , minimum), interpolation = cv2.INTER_AREA).astype(float)
 
-    h, w , d = resized.shape
-    rotation_theta = 0
-
-    diff = cv2.subtract(resized, pattern)
+    diff = image - resized_pattern
     min_error = np.sum(np.abs(diff))
+    temp = image.copy()
+    rotated_image = image.copy()
+
 
     # for each rotation ( theta ) possible ...
-    for i in range(0,359,90):
+    for i in range(0,4):
         # now subtract the image from the pattern ....
         # calculate the error with this angle ...
-        diff = cv2.subtract(resized, pattern)
+        temp = cv2.rotate(temp,cv2.ROTATE_90_CLOCKWISE,temp)
+
+        #diff = cv2.subtract(temp, pattern)
+        diff = temp - resized_pattern
+        # plt.imshow(diff/255)
+        # plt.show()
         err = np.sum(np.abs(diff))
 
         if err < min_error :
             min_error = err
-            rotation_theta = i
+            rotated_image = temp.copy()
+            # plt.imshow(temp/255)
+            # plt.show()
+            # print(i)
      
     
     # print mse and rotation angle
-    print(f"mse between image and its pattern {min_error} and theta ( rotation angle ) : {rotation_theta}")
+    print(f"mse between image and its pattern {min_error} ")
 
 
     #rotation angle in degree
-    image = ndimage.rotate(image, rotation_theta)
-    return image
+    #image = ndimage.rotate(image, rotation_theta)
+
+    plt.imshow(rotated_image/255)
+    plt.show()
+
+    return rotated_image
 
 def binary_threshold(image):
     return None
+
+
+def lbp(image):
+    METHOD = 'default'
+    lbp_image = local_binary_pattern(image, 16, 1, METHOD)
+    return lbp_image
 
 
 def predict(img, pattern):
@@ -117,7 +141,7 @@ if __name__ == "__main__":
     for testing the function result by runnig the program
     """
     path = os.path.join(os.path.dirname(constants["image_folder"]),constants["label_name"])
-    img_path = path + ".png"
+    img_path = path + ".jpg"
     label_path = path + ".json"
     print(path,f"\n{img_path},{label_path}")
     img = cv2.imread(img_path)
@@ -139,7 +163,20 @@ if __name__ == "__main__":
     # test historgam matching 
     matched = histogram_matching(img,pattern)   
 
-    # rotated ...
-    rotated = rotation_matching(matched,pattern) 
+    # rotated for matched image...
+    his_matched_rotated = rotation_matching(matched,pattern) 
+
+    # rotated image...
+    rotated = rotation_matching(img,pattern) 
     # predict()
 
+    #rotated = cv2.resize(rotated, (rotated.shape[1] , rotated.shape[0]), interpolation = cv2.INTER_AREA).astype(float)
+
+    gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
+    gs_pattern = to_grayscale(pattern.astype(np.uint8))   
+
+    plt.imshow(lbp(gs_rotated))
+    plt.show()
+
+    plt.imshow(lbp(gs_pattern))
+    plt.show()
