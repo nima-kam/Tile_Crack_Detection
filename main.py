@@ -42,10 +42,10 @@ def crop(image, width=None, height=None):
     vertices = find_vertices(op).squeeze()
 
 
-    # visualize the result
-    imshow(image,False)    
-    plt.scatter([x for x, y in vertices], [y for x, y in vertices])
-    plt.show()
+    # visualize the result of corner finding
+    # imshow(image,False)    
+    # plt.scatter([x for x, y in vertices], [y for x, y in vertices])
+    # plt.show()
     
     if len(vertices) ==4:
         if width is None or height is None:
@@ -62,8 +62,11 @@ def histogram_matching(image,pattern):
     pattern = cv2.cvtColor(pattern,cv2.COLOR_BGR2RGB)
     matched = match_histograms(image, pattern ,
                            multichannel=True)
+
+    # visualize the result of histogram matching
     plt.imshow(matched)
     plt.show()
+
     return matched
 
 def rotation_matching(image,pattern):
@@ -118,8 +121,8 @@ def binary_threshold(image):
 
 
 def lbp(image):
-    METHOD = 'default'
-    lbp_image = local_binary_pattern(image, 16, 1, METHOD)
+    METHOD = 'ror'
+    lbp_image = local_binary_pattern(image, 8, 1, METHOD)
     return lbp_image
 
 
@@ -132,7 +135,7 @@ def predict(img, pattern):
     crop_img=crop(image=img)
     matched_img=histogram_matching(image=crop_img,pattern=pattern)
     rotated_img=rotation_matching(image=matched_img,pattern=pattern)
-    bi_img=binary_threshold(rotated_img)
+    # bi_img=binary_threshold(rotated_img)
     
     return None
 
@@ -164,7 +167,7 @@ if __name__ == "__main__":
     matched = histogram_matching(img,pattern)   
 
     # rotated for matched image...
-    his_matched_rotated = rotation_matching(matched,pattern) 
+    # his_matched_rotated = rotation_matching(matched,pattern) 
 
     # rotated image...
     rotated = rotation_matching(img,pattern) 
@@ -175,8 +178,9 @@ if __name__ == "__main__":
     gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
     gs_pattern = to_grayscale(pattern.astype(np.uint8))   
 
-    plt.imshow(lbp(gs_rotated))
-    plt.show()
+    rotated_lbp = lbp(gs_rotated)
+    imshow((rotated_lbp),False)
+    
 
-    plt.imshow(lbp(gs_pattern))
+    imshow(lbp(gs_pattern))
     plt.show()

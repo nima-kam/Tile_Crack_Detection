@@ -41,8 +41,8 @@ def to_edges(im,lower=40,upper=150):
     :params: upper: upper threshold for edges
     """
     im = im.copy()
-    sharpen_kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-    im=cv2.filter2D(im,1,sharpen_kernel,borderType=cv2.BORDER_REFLECT)
+    # sharpen_kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
+    # im=cv2.filter2D(im,1,sharpen_kernel,borderType=cv2.BORDER_REFLECT)
     edge = cv2.Canny(im.astype(np.uint8),lower,upper)
     return edge
 
@@ -74,6 +74,12 @@ def blur(im,kernel_size=constants["kernel_size"]):
     kernel = gkern(kernel_size)
     b = sg.correlate(im,kernel,mode='same')
     return b
+
+def median_blur(im,ksize=constants["kernel_size"]):
+    """Returns a 2D median blured image"""
+    mb=cv2.medianBlur(im,ksize=ksize)
+    return mb
+
 def find_vertices(im):
     """
     find biggest contour in the image
