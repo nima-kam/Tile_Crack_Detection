@@ -112,3 +112,55 @@ def imshow(im,show=True):
     plt.axis('off')
     if show:
         plt.show()
+
+def blur_freq(im,threshold):
+    # bure image based on frequency 
+    result = im.copy()
+    denoised = im.copy()
+    denoised = np.fft.fft2(denoised)
+    denoised = np.fft.fftshift(denoised)
+
+    row,col = im.shape[0],im.shape[1]
+    shape = (row , col)
+    center = (row/2 , col/2)
+
+    freq = np.zeros(shape)
+    # above_threshold_counter = 0
+    # below_threshold_counter = 0
+
+    for x in range(row):
+        for y in range(col):
+            dist = np.sqrt((x - center[0])**2 + (y-center[1])**2)
+            if dist < threshold:
+                freq[x][y] = 1
+            # if dist > 150:
+            #     above_threshold_counter += 1
+            # else:
+            #     below_threshold_counter += 1
+            
+    
+    denoised = denoised * freq
+    denoised = np.fft.ifftshift(denoised)
+    denoised = np.fft.ifft2(denoised)
+
+    for x in range(row):
+        for y in range(col):
+            result[x][y] = float(denoised[x][y])
+
+    # print(above_threshold_counter)
+    # print(below_threshold_counter)
+
+    return result
+
+def sliding_window(image,stride_width,stride_height,window_size=[50,50]):
+    width = image.shape[1]
+    height = image.shape[0]
+
+    windows =  []
+    for i in range(0,width,stride_width):
+        for j in range(0,height,stride_height):
+            if i + window_size[0] < width:
+                if j + window_size[1] < height:
+                    windows.append(image[j:j + window_size[1], i:i+window_size[0]])
+
+    return windows

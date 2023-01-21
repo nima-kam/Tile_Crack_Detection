@@ -184,3 +184,63 @@ if __name__ == "__main__":
 
     imshow(lbp(gs_pattern))
     plt.show()
+
+    # print(rotated_lbp.shape)
+    # print(gs_pattern.shape)
+
+    gs_pattern_resized = cv2.resize(gs_pattern, rotated_lbp.shape, interpolation = cv2.INTER_AREA).astype(float)
+
+    imshow((rotated_lbp),False)
+    imshow(lbp(gs_pattern_resized))
+
+    rotated_lbp_uint = np.uint8(rotated_lbp)
+    # rotated_morph = cv2.morphologyEx(rotated_lbp_uint,cv2.MORPH_OPEN,(3,3),iterations=2)
+    # imshow(rotated_morph)
+    # plt.show()
+    blur_rotated_morph = blur_freq(rotated_lbp_uint,65)
+    imshow(blur_rotated_morph)
+    plt.show()
+
+    diff = blur_rotated_morph - gs_pattern_resized
+    imshow(diff)
+    plt.show()
+    diff2 = gs_pattern_resized - blur_rotated_morph
+    for i in range(1000):
+        diff2 = diff2 - blur_rotated_morph
+
+    imshow(diff2)
+    plt.show()
+
+    diff2 = 255 - diff2
+    imshow(diff2)
+    plt.show()
+
+    diff3 = diff2
+    # diff3 = cv2.morphologyEx(diff2,cv2.MORPH_CLOSE,(5,5),iterations=10)
+    # imshow(diff3)
+    # plt.show()
+    plt.show()
+
+    gs_pattern_resized2 = cv2.resize(gs_pattern, rotated_lbp.shape, interpolation = cv2.INTER_AREA).astype(float)
+    kernel = np.ones((5, 5), np.uint8)
+    gs_pattern_resized2 = cv2.erode(gs_pattern_resized2, kernel,iterations=2)
+    opening = cv2.morphologyEx(gs_pattern_resized2, cv2.MORPH_OPEN,
+                           kernel, iterations=2) 
+    imshow(opening)
+    plt.show()
+
+    diff4 = opening - diff3
+    for i in range(1000):
+        diff4 = opening - diff4
+    
+    imshow(diff4)
+    plt.show()
+    # pattern2 = 255 - gs_pattern_resized
+    # pattern2 = cv2.morphologyEx(pattern2,cv2.MORPH_DILATE,(5,5),iterations=171)
+    # imshow(pattern2)
+    # plt.show()
+    # for i in range(500):
+    #     diff2 = diff2 - pattern2
+    
+    # imshow(diff2)
+    # plt.show()
