@@ -24,6 +24,11 @@ def opening(image,kernel):
     dialect=cv2.dilate(image,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
     erode=cv2.erode(dialect,kernel=kernel,iterations=1,borderType=cv2.BORDER_REPLICATE)
     return(erode)
+def closing(image,kernel):
+    
+    erode=cv2.erode(image,kernel=kernel,iterations=1,borderType=cv2.BORDER_REPLICATE)    
+    dialect=cv2.dilate(erode,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
+    return(dialect)
 
 def crop_out(im, vertices, size=None):
     if size is None :
@@ -46,17 +51,17 @@ def to_edges(im,lower=40,upper=150):
     edge = cv2.Canny(im.astype(np.uint8),lower,upper)
     return edge
 
-def to_binary(im,adaptive=False,otsu=True,thresh=200):
+def to_binary(im,adaptive=False,otsu=True,thresh=200,max_value=1,blockSize=7,C=4):
     im = im.copy().astype(np.uint8)
 
     if adaptive is False:
         if otsu:
-            t,bi = cv2.threshold(im,thresh,1,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            t,bi = cv2.threshold(im,thresh,max_value,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
         else:
-            t,bi = cv2.threshold(im,thresh,1,cv2.THRESH_BINARY)
+            t,bi = cv2.threshold(im,thresh,max_value,cv2.THRESH_BINARY)
         print("threshold = ",t)
     else:        
-        bi=cv2.adaptiveThreshold(im,1,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,17,10)
+        bi=cv2.adaptiveThreshold(im,max_value,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,blockSize=blockSize,C=C)
 
     return bi
 
@@ -99,7 +104,7 @@ def find_vertices(im):
 
     return curve
 
-def imshow(im,show=True):
+def imshow(im,show=True,title="figure"):
     plt.figure()
     width, height, *channels = im.shape
     if channels:
@@ -110,6 +115,7 @@ def imshow(im,show=True):
     else:
         plt.imshow(im, cmap='gray')
     plt.axis('off')
+    plt.title(title)
     if show:
         plt.show()
 

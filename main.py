@@ -43,17 +43,17 @@ def crop(image, width=None, height=None):
 
 
     # visualize the result of corner finding
-    # imshow(image,False)    
+    # imshow(image,False,"initial image")    
     # plt.scatter([x for x, y in vertices], [y for x, y in vertices])
     # plt.show()
     
-    if len(vertices) ==4:
+    if len(vertices) ==4: # the tile must have 4 corners
         if width is None or height is None:
             size = None 
         else:
             size = (width, height)
         crop_image=crop_out(image,vertices=vertices,size=size)
-    imshow(crop_image)    
+    imshow(crop_image,title="croped tile")    
 
     return crop_image
 
@@ -65,6 +65,7 @@ def histogram_matching(image,pattern):
 
     # visualize the result of histogram matching
     plt.imshow(matched)
+    plt.title("histogram matching")
     plt.show()
 
     return matched
@@ -131,9 +132,8 @@ def predict(img, pattern):
     :params: img: input RGB Tile image
     :params: pattern: input RGB Tile pattern
     """
-
     crop_img=crop(image=img)
-    matched_img=histogram_matching(image=crop_img,pattern=pattern)
+    matched_img=histogram_matching(image=crop_img,pattern=pattern) # deletes the cracks in the tile
     rotated_img=rotation_matching(image=matched_img,pattern=pattern)
     # bi_img=binary_threshold(rotated_img)
     
@@ -158,13 +158,14 @@ if __name__ == "__main__":
 
     pattern = cv2.imread(constants["pattern_name"])        
     print(f"json label: {data}\n\nimage shape: {img.shape}\n\npattern shape: {pattern.shape}")
+    r_pattern = cv2.resize(pattern, img.shape[:2], interpolation = cv2.INTER_AREA)
     
     # test crop
     img = crop(img)
 
     
     # test historgam matching 
-    matched = histogram_matching(img,pattern)   
+    matched = histogram_matching(img,r_pattern)
 
     # rotated for matched image...
     # his_matched_rotated = rotation_matching(matched,pattern) 
@@ -173,37 +174,45 @@ if __name__ == "__main__":
     rotated = rotation_matching(img,pattern) 
     # predict()
 
-    #rotated = cv2.resize(rotated, (rotated.shape[1] , rotated.shape[0]), interpolation = cv2.INTER_AREA).astype(float)
+    #rotated = cv2.resize(rotated, , interpolation = cv2.INTER_AREA).astype(float)
 
     gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
-    gs_pattern = to_grayscale(pattern.astype(np.uint8))   
+    gs_pattern = to_grayscale(r_pattern.astype(np.uint8))   
 
-    rotated_lbp = lbp(gs_rotated)
-    imshow((rotated_lbp),False)
+    med_blur_gs_rotated=median_blur(gs_rotated,3)
+    rotated_lbp = lbp(med_blur_gs_rotated)
+    imshow((rotated_lbp),False,"image lbp")
     
 
-    imshow(lbp(gs_pattern))
-    plt.show()
+    # imshow(lbp(gs_pattern),title="pattern lbp")
+    # plt.show()
+
+    bi_rot_lbp=to_binary(rotated_lbp, adaptive=True,blockSize=11,C=0)
+    imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
+
+    morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
+    open_bi_lbp=closing(bi_rot_lbp,morph_kernel)
+    imshow(median_blur(open_bi_lbp,5),show=True,title="Image open binary lbp ")
 
     # print(rotated_lbp.shape)
     # print(gs_pattern.shape)
 
     gs_pattern_resized = cv2.resize(gs_pattern, rotated_lbp.shape, interpolation = cv2.INTER_AREA).astype(float)
 
-    imshow((rotated_lbp),False)
-    imshow(lbp(gs_pattern_resized))
+    # imshow((rotated_lbp),False)
+    # imshow(lbp(gs_pattern_resized))
 
     rotated_lbp_uint = np.uint8(rotated_lbp)
     # rotated_morph = cv2.morphologyEx(rotated_lbp_uint,cv2.MORPH_OPEN,(3,3),iterations=2)
     # imshow(rotated_morph)
     # plt.show()
+
     blur_rotated_morph = blur_freq(rotated_lbp_uint,65)
-    imshow(blur_rotated_morph)
-    plt.show()
+    imshow(blur_rotated_morph,title="frourier blured image lbp")
 
     diff = blur_rotated_morph - gs_pattern_resized
-    imshow(diff)
-    plt.show()
+    imshow(diff,title="frourier blured image lbp difference with gray scale resized pattern")
+    
     diff2 = gs_pattern_resized - blur_rotated_morph
     for i in range(1000):
         diff2 = diff2 - blur_rotated_morph
@@ -212,7 +221,7 @@ if __name__ == "__main__":
     plt.show()
 
     diff2 = 255 - diff2
-    imshow(diff2)
+    imshow(diff2,title="reverse")
     plt.show()
 
     diff3 = diff2
@@ -235,12 +244,13 @@ if __name__ == "__main__":
     
     imshow(diff4)
     plt.show()
-    # pattern2 = 255 - gs_pattern_resized
-    # pattern2 = cv2.morphologyEx(pattern2,cv2.MORPH_DILATE,(5,5),iterations=171)
-    # imshow(pattern2)
-    # plt.show()
-    # for i in range(500):
-    #     diff2 = diff2 - pattern2
+
+    pattern2 = 255 - gs_pattern_resized
+    pattern2 = cv2.morphologyEx(pattern2,cv2.MORPH_DILATE,(5,5),iterations=171)
+    imshow(pattern2)
+    plt.show()
+    for i in range(500):
+        diff2 = diff2 - pattern2
     
-    # imshow(diff2)
-    # plt.show()
+    imshow(diff2)
+    plt.show()
