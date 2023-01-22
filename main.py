@@ -175,7 +175,7 @@ if __name__ == "__main__":
     # predict()
 
     #rotated = cv2.resize(rotated, , interpolation = cv2.INTER_AREA).astype(float)
-
+    r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
     gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
     gs_pattern = to_grayscale(r_pattern.astype(np.uint8))   
 
@@ -191,66 +191,74 @@ if __name__ == "__main__":
     imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
 
     morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
-    open_bi_lbp=closing(bi_rot_lbp,morph_kernel)
-    imshow(median_blur(open_bi_lbp,5),show=True,title="Image open binary lbp ")
+    open_bi_lbp=closing(bi_rot_lbp,morph_kernel).astype(np.float32)
+    median_blur_open_bi_lbp = median_blur(open_bi_lbp,5)
+    imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
 
     # print(rotated_lbp.shape)
     # print(gs_pattern.shape)
+    
+    bin_r_pattern = to_binary(gs_pattern.astype(np.uint8),otsu=False,thresh=240).astype(np.float32)
+    reversed_bin_pattern = 1 - bin_r_pattern
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    reversed_bin_pattern = cv2.dilate(reversed_bin_pattern,iterations=6,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
+    imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
 
-    gs_pattern_resized = cv2.resize(gs_pattern, rotated_lbp.shape, interpolation = cv2.INTER_AREA).astype(float)
+    diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
+    imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
 
     # imshow((rotated_lbp),False)
     # imshow(lbp(gs_pattern_resized))
 
-    rotated_lbp_uint = np.uint8(rotated_lbp)
-    # rotated_morph = cv2.morphologyEx(rotated_lbp_uint,cv2.MORPH_OPEN,(3,3),iterations=2)
-    # imshow(rotated_morph)
+    # rotated_lbp_uint = np.uint8(rotated_lbp)
+    # # rotated_morph = cv2.morphologyEx(rotated_lbp_uint,cv2.MORPH_OPEN,(3,3),iterations=2)
+    # # imshow(rotated_morph)
+    # # plt.show()
+
+    # blur_rotated_morph = blur_freq(rotated_lbp_uint,65)
+    # imshow(blur_rotated_morph,title="frourier blured image lbp")
+
+    # diff = blur_rotated_morph - gs_pattern_resized
+    # imshow(diff,title="frourier blured image lbp difference with gray scale resized pattern")
+    
+    # diff2 = gs_pattern_resized - blur_rotated_morph
+    # for i in range(1000):
+    #     diff2 = diff2 - blur_rotated_morph
+
+    # imshow(diff2)
     # plt.show()
 
-    blur_rotated_morph = blur_freq(rotated_lbp_uint,65)
-    imshow(blur_rotated_morph,title="frourier blured image lbp")
-
-    diff = blur_rotated_morph - gs_pattern_resized
-    imshow(diff,title="frourier blured image lbp difference with gray scale resized pattern")
-    
-    diff2 = gs_pattern_resized - blur_rotated_morph
-    for i in range(1000):
-        diff2 = diff2 - blur_rotated_morph
-
-    imshow(diff2)
-    plt.show()
-
-    diff2 = 255 - diff2
-    imshow(diff2,title="reverse")
-    plt.show()
-
-    diff3 = diff2
-    # diff3 = cv2.morphologyEx(diff2,cv2.MORPH_CLOSE,(5,5),iterations=10)
-    # imshow(diff3)
+    # diff2 = 255 - diff2
+    # imshow(diff2,title="reverse")
     # plt.show()
-    plt.show()
 
-    gs_pattern_resized2 = cv2.resize(gs_pattern, rotated_lbp.shape, interpolation = cv2.INTER_AREA).astype(float)
-    kernel = np.ones((5, 5), np.uint8)
-    gs_pattern_resized2 = cv2.erode(gs_pattern_resized2, kernel,iterations=2)
-    opening = cv2.morphologyEx(gs_pattern_resized2, cv2.MORPH_OPEN,
-                           kernel, iterations=2) 
-    imshow(opening)
-    plt.show()
+    # diff3 = diff2
+    # # diff3 = cv2.morphologyEx(diff2,cv2.MORPH_CLOSE,(5,5),iterations=10)
+    # # imshow(diff3)
+    # # plt.show()
+    # plt.show()
 
-    diff4 = opening - diff3
-    for i in range(1000):
-        diff4 = opening - diff4
+    # gs_pattern_resized2 = cv2.resize(gs_pattern, rotated_lbp.shape, interpolation = cv2.INTER_AREA).astype(float)
+    # kernel = np.ones((5, 5), np.uint8)
+    # gs_pattern_resized2 = cv2.erode(gs_pattern_resized2, kernel,iterations=2)
+    # opening = cv2.morphologyEx(gs_pattern_resized2, cv2.MORPH_OPEN,
+    #                        kernel, iterations=2) 
+    # imshow(opening)
+    # plt.show()
+
+    # diff4 = opening - diff3
+    # for i in range(1000):
+    #     diff4 = opening - diff4
     
-    imshow(diff4)
-    plt.show()
+    # imshow(diff4)
+    # plt.show()
 
-    pattern2 = 255 - gs_pattern_resized
-    pattern2 = cv2.morphologyEx(pattern2,cv2.MORPH_DILATE,(5,5),iterations=171)
-    imshow(pattern2)
-    plt.show()
-    for i in range(500):
-        diff2 = diff2 - pattern2
+    # pattern2 = 255 - gs_pattern_resized
+    # pattern2 = cv2.morphologyEx(pattern2,cv2.MORPH_DILATE,(5,5),iterations=171)
+    # imshow(pattern2)
+    # plt.show()
+    # for i in range(500):
+    #     diff2 = diff2 - pattern2
     
-    imshow(diff2)
-    plt.show()
+    # imshow(diff2)
+    # plt.show()
