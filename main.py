@@ -121,22 +121,46 @@ def binary_threshold(image):
     return None
 
 
-def lbp(image):
-    METHOD = 'ror'
-    lbp_image = local_binary_pattern(image, 8, 1, METHOD)
-    return lbp_image
-
-
 def predict(img, pattern):
     """
     :params: img: input RGB Tile image
     :params: pattern: input RGB Tile pattern
     """
-    crop_img=crop(image=img)
-    matched_img=histogram_matching(image=crop_img,pattern=pattern) # deletes the cracks in the tile
-    rotated_img=rotation_matching(image=matched_img,pattern=pattern)
+
+    img=crop(image=img)
+
+    matched_img=histogram_matching(image=img,pattern=pattern) # deletes the cracks in the tile
+    rotated = rotation_matching(img,pattern) 
+
+    r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
+
+    gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
+    gs_pattern = to_grayscale(r_pattern.astype(np.uint8))
     # bi_img=binary_threshold(rotated_img)
     
+    med_blur_gs_rotated=median_blur(gs_rotated,3)
+    rotated_lbp = lbp(med_blur_gs_rotated)
+    imshow((rotated_lbp),False,"image lbp")
+
+    bi_rot_lbp=to_binary(rotated_lbp, adaptive=True,blockSize=11,C=0)
+    imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
+
+    morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
+    open_bi_lbp=closing(bi_rot_lbp,morph_kernel).astype(np.float32)
+    median_blur_open_bi_lbp = median_blur(open_bi_lbp,5)
+    imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
+
+    bin_r_pattern = to_binary(gs_pattern.astype(np.uint8),otsu=False,thresh=240).astype(np.float32)
+    reversed_bin_pattern = 1 - bin_r_pattern
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    reversed_bin_pattern = cv2.dilate(reversed_bin_pattern,iterations=8,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
+    imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
+
+    diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
+    imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
+
+    showCountours(img,diff_open_bi_lbp_pattern,threshold=4000)
+
     return None
 
 if __name__ == "__main__":
@@ -158,54 +182,82 @@ if __name__ == "__main__":
 
     pattern = cv2.imread(constants["pattern_name"])        
     print(f"json label: {data}\n\nimage shape: {img.shape}\n\npattern shape: {pattern.shape}")
-    r_pattern = cv2.resize(pattern, img.shape[:2], interpolation = cv2.INTER_AREA)
+
+    predict(img,pattern)
+    #r_pattern = cv2.resize(pattern, img.shape[:2], interpolation = cv2.INTER_AREA)
     
     # test crop
-    img = crop(img)
+    # img = crop(img)
 
     
-    # test historgam matching 
-    matched = histogram_matching(img,r_pattern)
+    # # test historgam matching 
+    # matched = histogram_matching(img,r_pattern)
 
-    # rotated for matched image...
-    # his_matched_rotated = rotation_matching(matched,pattern) 
+    # # rotated for matched image...
+    # # his_matched_rotated = rotation_matching(matched,pattern) 
 
-    # rotated image...
-    rotated = rotation_matching(img,pattern) 
-    # predict()
+    # # rotated image...
+    # rotated = rotation_matching(img,pattern) 
+    # # predict()
 
-    #rotated = cv2.resize(rotated, , interpolation = cv2.INTER_AREA).astype(float)
-    r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
-    gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
-    gs_pattern = to_grayscale(r_pattern.astype(np.uint8))   
+    # #rotated = cv2.resize(rotated, , interpolation = cv2.INTER_AREA).astype(float)
+    # r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
+    # gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
+    # gs_pattern = to_grayscale(r_pattern.astype(np.uint8))   
 
-    med_blur_gs_rotated=median_blur(gs_rotated,3)
-    rotated_lbp = lbp(med_blur_gs_rotated)
-    imshow((rotated_lbp),False,"image lbp")
+    # med_blur_gs_rotated=median_blur(gs_rotated,3)
+    # rotated_lbp = lbp(med_blur_gs_rotated)
+    # imshow((rotated_lbp),False,"image lbp")
     
 
-    # imshow(lbp(gs_pattern),title="pattern lbp")
-    # plt.show()
+    # # imshow(lbp(gs_pattern),title="pattern lbp")
+    # # plt.show()
 
-    bi_rot_lbp=to_binary(rotated_lbp, adaptive=True,blockSize=11,C=0)
-    imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
+    # bi_rot_lbp=to_binary(rotated_lbp, adaptive=True,blockSize=11,C=0)
+    # imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
 
-    morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
-    open_bi_lbp=closing(bi_rot_lbp,morph_kernel).astype(np.float32)
-    median_blur_open_bi_lbp = median_blur(open_bi_lbp,5)
-    imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
+    # morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
+    # open_bi_lbp=closing(bi_rot_lbp,morph_kernel).astype(np.float32)
+    # median_blur_open_bi_lbp = median_blur(open_bi_lbp,5)
+    # imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
 
-    # print(rotated_lbp.shape)
-    # print(gs_pattern.shape)
+    # # print(rotated_lbp.shape)
+    # # print(gs_pattern.shape)
     
-    bin_r_pattern = to_binary(gs_pattern.astype(np.uint8),otsu=False,thresh=240).astype(np.float32)
-    reversed_bin_pattern = 1 - bin_r_pattern
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
-    reversed_bin_pattern = cv2.dilate(reversed_bin_pattern,iterations=6,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
-    imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
+    # bin_r_pattern = to_binary(gs_pattern.astype(np.uint8),otsu=False,thresh=240).astype(np.float32)
+    # reversed_bin_pattern = 1 - bin_r_pattern
+    # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    # reversed_bin_pattern = cv2.dilate(reversed_bin_pattern,iterations=8,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
+    # imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
 
-    diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
-    imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
+    # diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
+    # imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
+
+    # showCountours(img,diff_open_bi_lbp_pattern,threshold=4000)
+    # c , _ =cv2.findContours(image=diff_open_bi_lbp_pattern.astype(np.uint8), mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+    
+    # diff_open_bi_lbp_pattern_cp = img.copy().astype('float')
+    # imshow(diff_open_bi_lbp_pattern_cp/255,title = "img copy")
+    # cracks =[]
+    # for i in range(len(c)):
+    #     area = cv2.contourArea(c[i])
+    #     if 4000 < area:
+    #         cracks.append(c[i])
+    #         print("max_i = ", i,"\ncontours:",len(c))
+    #         diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (0,255,0),thickness= 3)
+    
+    # imshow(diff_open_bi_lbp_pattern_cp/255,title="countours")
+
+
+
+
+
+
+
+
+
+
+
 
     # imshow((rotated_lbp),False)
     # imshow(lbp(gs_pattern_resized))

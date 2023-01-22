@@ -6,6 +6,7 @@ import scipy.signal as sg
 import scipy.stats as st
 import numpy as np
 from matplotlib import pyplot as plt
+from skimage.feature import local_binary_pattern
 
 constants ={
     "image_size":(1200,1200),
@@ -104,6 +105,12 @@ def find_vertices(im):
 
     return curve
 
+
+def lbp(image):
+    METHOD = 'ror'
+    lbp_image = local_binary_pattern(image, 8, 1, METHOD)
+    return lbp_image
+
 def imshow(im,show=True,title="figure"):
     plt.figure()
     width, height, *channels = im.shape
@@ -170,3 +177,17 @@ def sliding_window(image,stride_width,stride_height,window_size=[50,50]):
                     windows.append(image[j:j + window_size[1], i:i+window_size[0]])
 
     return windows
+
+def showCountours(base_image , display_image, threshold = 4000):
+    c , _ =cv2.findContours(image=display_image.astype(np.uint8), mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+    diff_open_bi_lbp_pattern_cp = base_image.copy().astype('float')
+    imshow(diff_open_bi_lbp_pattern_cp/255,title = "img copy")
+    cracks =[]
+    for i in range(len(c)):
+        area = cv2.contourArea(c[i])
+        if 4000 < area:
+            cracks.append(c[i])
+            print("max_i = ", i,"\ncontours:",len(c))
+            diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (0,255,0),thickness= 3)
+    imshow(diff_open_bi_lbp_pattern_cp/255,title="countours")
+    return (diff_open_bi_lbp_pattern_cp/255)
