@@ -38,7 +38,7 @@ def crop_out(im, vertices, size=None):
         width, height = size
     target = np.array([[0,0],[0,height],[width,height],[width,0]])
     transform = cv2.getPerspectiveTransform(vertices.astype(np.float32), target.astype(np.float32))  # get the top or bird eye view effect
-    return cv2.warpPerspective(src=im,M= transform,dsize= (width, height))
+    return cv2.warpPerspective(src=im,M= transform,dsize= (width, height)),transform
 
 def to_edges(im,lower=40,upper=150):
     """
@@ -179,15 +179,21 @@ def sliding_window(image,stride_width,stride_height,window_size=[50,50]):
     return windows
 
 def showCountours(base_image , display_image, threshold = 4000):
+    """
+    finds contours on 
+    """
     c , _ =cv2.findContours(image=display_image.astype(np.uint8), mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
     diff_open_bi_lbp_pattern_cp = base_image.copy().astype('float')
-    imshow(diff_open_bi_lbp_pattern_cp/255,title = "img copy")
+    # imshow(diff_open_bi_lbp_pattern_cp/255,title = "img copy")
     cracks =[]
     for i in range(len(c)):
-        area = cv2.contourArea(c[i])
-        if 4000 < area:
-            cracks.append(c[i])
+        ci=c[i]
+        # ci=cv2.approxPolyDP(ci,epsilon=10,closed=True) # reduce the number of points in contour
+
+        area = cv2.contourArea(ci)
+        if threshold < area:
+            cracks.append(ci)
             print("max_i = ", i,"\ncontours:",len(c))
-            diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (0,255,0),thickness= 3)
+            diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (10,250,0),thickness= 2)
     imshow(diff_open_bi_lbp_pattern_cp/255,title="countours")
     return (diff_open_bi_lbp_pattern_cp/255)

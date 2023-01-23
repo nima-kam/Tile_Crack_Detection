@@ -30,7 +30,7 @@ def crop(image, width=None, height=None):
     # edges = to_edges(blurred,40,100)      
     # imshow(edges)  
 
-    bi = to_binary(blurred,otsu=False,thresh=120)# threshold should be dynamic
+    bi = to_binary(blurred,otsu=False,thresh=125)# threshold should be dynamic
     # imshow(bi)  
 
     kernel = cv2.getStructuringElement(
@@ -52,10 +52,10 @@ def crop(image, width=None, height=None):
             size = None 
         else:
             size = (width, height)
-        crop_image=crop_out(image,vertices=vertices,size=size)
+        crop_image,transform=crop_out(image,vertices=vertices,size=size)
     imshow(crop_image,title="croped tile")    
 
-    return crop_image
+    return crop_image,transform
 
 def histogram_matching(image,pattern):
     image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
@@ -121,13 +121,20 @@ def binary_threshold(image):
     return None
 
 
+def train(image,pattern,label):
+    img,trans=crop(image=img)
+
+    
+    matched_img=histogram_matching(image=img,pattern=pattern) # deletes the cracks in the tile
+    rotated = rotation_matching(img,pattern) 
+
 def predict(img, pattern):
     """
     :params: img: input RGB Tile image
     :params: pattern: input RGB Tile pattern
     """
 
-    img=crop(image=img)
+    img,trans=crop(image=img)
 
     matched_img=histogram_matching(image=img,pattern=pattern) # deletes the cracks in the tile
     rotated = rotation_matching(img,pattern) 
@@ -159,9 +166,9 @@ def predict(img, pattern):
     diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
     imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
 
-    showCountours(img,diff_open_bi_lbp_pattern,threshold=4000)
+    showCountours(img,diff_open_bi_lbp_pattern,threshold=3500)
 
-    return None
+    return 
 
 if __name__ == "__main__":
     """
