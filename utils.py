@@ -316,3 +316,43 @@ def get_resized_proposals(contours):
     for box in boxes :
         box = [box[0]/32 , box[1]/32 , box[2]/32 , box[3]/32]
     return boxes
+
+def find_lbl_box(contour):
+    min_left = constants["resized_dim"]
+    min_top = constants["resized_dim"]
+    max_right = 0
+    max_down = 0
+
+    #print(f"contour : {contour}")
+    for point in contour:
+        #print(f"point of contour : {point}")
+        if point[0][0][0] > max_down:
+            max_down = point[0][0][0]
+        if point[0][0][0] < min_top:
+            min_top = point[0][0][0]
+        if point[0][0][1] > max_right:
+            max_right = point[0][0][1]
+        if point[0][0][1] < min_left:
+            min_left = point[0][0][1]
+    return [min_top,min_left,max_down,max_right]
+
+def IOU(labels,box,threshold = 0.1):
+    
+    for lbl in labels:
+        label_box = find_lbl_box(lbl)
+        xA = max(label_box[0], box[0])
+        yA = max(label_box[1], box[1])
+        xB = min(label_box[2], box[2])
+        yB = min(label_box[3], box[3])
+
+        interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+
+        boxArea = (box[2] - box[0] + 1) * (box[3] - box[1] + 1)
+        labelBoxArea = (label_box[2] - label_box[0] + 1) * (label_box[3] - label_box[1] + 1)
+
+        IOU = interArea / ((boxArea + labelBoxArea) -interArea)
+        print(F"IOU{IOU}")
+    
+        if IOU > threshold:
+            return True
+    return False

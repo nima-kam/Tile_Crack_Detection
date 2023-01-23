@@ -178,6 +178,12 @@ def predict(img, pattern):
     imshow(show_proposals(rotated/255,proposals),title = "proposals")
     model_proposals = get_resized_proposals(cracks)
 
+    answers = []
+    for proposal in proposals:
+        if IOU(rotated_transformed_labels,proposal):
+            answers.append(proposal)
+    imshow(show_proposals(rotated/255,answers),title = "answers")
+
     return model_proposals
 
 if __name__ == "__main__":
