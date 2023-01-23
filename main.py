@@ -30,7 +30,7 @@ def crop(image, width=None, height=None):
     # edges = to_edges(blurred,40,100)      
     # imshow(edges)  
 
-    bi = to_binary(blurred,otsu=False,thresh=125)# threshold should be dynamic
+    bi = to_binary(blurred,otsu=False,thresh=120)# threshold should be dynamic
     # imshow(bi)  
 
     kernel = cv2.getStructuringElement(
@@ -86,10 +86,13 @@ def rotation_matching(image,pattern):
 
 
     # for each rotation ( theta ) possible ...
+    final_angle = 0
+    angle = 0
     for i in range(0,4):
         # now subtract the image from the pattern ....
         # calculate the error with this angle ...
         temp = cv2.rotate(temp,cv2.ROTATE_90_CLOCKWISE,temp)
+        angle += 90
 
         #diff = cv2.subtract(temp, pattern)
         diff = temp - resized_pattern
@@ -100,6 +103,7 @@ def rotation_matching(image,pattern):
         if err < min_error :
             min_error = err
             rotated_image = temp.copy()
+            final_angle = angle
             # plt.imshow(temp/255)
             # plt.show()
             # print(i)
@@ -115,7 +119,7 @@ def rotation_matching(image,pattern):
     plt.imshow(rotated_image/255)
     plt.show()
 
-    return rotated_image
+    return rotated_image,final_angle
 
 def binary_threshold(image):
     return None
@@ -137,7 +141,10 @@ def predict(img, pattern):
     img,trans=crop(image=img)
 
     matched_img=histogram_matching(image=img,pattern=pattern) # deletes the cracks in the tile
-    rotated = rotation_matching(img,pattern) 
+    rotated , angle = rotation_matching(img,pattern) 
+
+    rotated_transformed_labels = transform_labels(constants['label_name']+".json",transform=trans , angle=angle)
+    imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
 
     r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
 

@@ -7,10 +7,14 @@ import scipy.stats as st
 import numpy as np
 from matplotlib import pyplot as plt
 from skimage.feature import local_binary_pattern
+import json
+import math
 
 constants ={
     "image_size":(1200,1200),
+    "image_folder":"images/",
     "kernel_size":9,
+    "resized_dim":1600
 }
 def to_grayscale(im):
     if im.shape[2] >1:
@@ -33,12 +37,89 @@ def closing(image,kernel):
 
 def crop_out(im, vertices, size=None):
     if size is None :
-        width, height = im.shape[1]-1 , im.shape[0]-1
+        width, height = constants["resized_dim"] , constants["resized_dim"]
     else:
         width, height = size
     target = np.array([[0,0],[0,height],[width,height],[width,0]])
     transform = cv2.getPerspectiveTransform(vertices.astype(np.float32), target.astype(np.float32))  # get the top or bird eye view effect
     return cv2.warpPerspective(src=im,M= transform,dsize= (width, height)),transform
+
+
+# def make_img_from_label_vertices(base_img , vertices):
+#     height , width , depth = base_img.shape
+#     img = np.zeros((height,width),dtype=np.uint8)
+#     for shape in vertices:
+#         for point in shape:
+#             img[int(point[0]),int(point[1])] = 255
+#     return img
+
+def load_vertices_from_json(json_file):
+    vertices = []
+    json_file = constants['image_folder']+"/"+json_file
+    f = open(json_file)
+    data = json.load(f)
+    shapes = data['shapes']
+    for shape in shapes:
+        points = shape['points']
+        vertices.append(points)
+    return vertices
+
+
+def transform_vertices(json_file,transform):
+    print("transform_vertices:")
+    vertices = load_vertices_from_json(json_file)
+    transformed_vertices = []
+    for points in vertices :
+        shape = []
+        for point in points:
+            point = np.float32(np.array([[point]])) 
+            shape.append(cv2.perspectiveTransform(np.array(point), transform))
+        transformed_vertices.append(shape)
+    return transformed_vertices
+
+
+def rotate_point(origin, point, angle):
+    """
+    Rotate a point counterclockwise by a given angle around a given origin.
+
+    The angle should be given in radians.
+    """
+    ox, oy = origin
+    print(point)
+    px, py = (point[0][0][0],point[0][0][1])
+
+    qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
+    qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
+
+    (point[0][0][0],point[0][0][1]) = (px, py)
+
+    return point
+
+def rotate_vertices(angle,origin_point,vertices):
+    for points in vertices:
+        for point in points:
+            point = rotate_point(origin_point,point,angle)
+    return vertices
+
+def transform_labels(json_file ,transform ,angle):
+    transformed_vertices = transform_vertices(json_file,transform)
+    rotated_transformed_vertices = rotate_vertices(angle,origin_point=(constants["resized_dim"]/2,constants["resized_dim"]/2),vertices=transformed_vertices)
+    return rotated_transformed_vertices
+
+def show_transfered_labels(image,vertices):
+    print("show_vertices:")
+    image_cp = image.copy()
+    for points in vertices:
+        print(points)
+        shape = []
+        for point in points:
+            p = [[int(point[0][0][0]),(point[0][0][1])]]
+            #p = np.array([[int(point[0][0][0]),(point[0][0][1])]], dtype=np.int32)
+            shape.append(p)
+        shape = np.array(shape,dtype=np.int32)
+        print(f"shape : {shape}")
+        image_cp = cv2.drawContours(image_cp, shape,-1, color = (10,250,0),thickness= 5)
+    return image_cp
 
 def to_edges(im,lower=40,upper=150):
     """
@@ -183,6 +264,7 @@ def showCountours(base_image , display_image, threshold = 4000):
     finds contours on 
     """
     c , _ =cv2.findContours(image=display_image.astype(np.uint8), mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+    
     diff_open_bi_lbp_pattern_cp = base_image.copy().astype('float')
     # imshow(diff_open_bi_lbp_pattern_cp/255,title = "img copy")
     cracks =[]
