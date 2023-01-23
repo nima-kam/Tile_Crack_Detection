@@ -7,12 +7,40 @@ from skimage.feature import local_binary_pattern
 import json
 import os
 from scipy import ndimage
+from tensorflow import keras
+
 from utils import *
 from const import *
+
 
 # enable pyplot interactive mode for showing images
 # plt.ion()
 
+
+input_shape=(constants['resized_dim'],constants['resized_dim'],3) # input dimensions for conv model
+model=keras.applications.mobilenet.MobileNet(include_top=False,weights='imagenet',input_shape=input_shape,classes=1) # conv model
+for l in model.layers:
+  l.trainable =False
+
+def find_similarity(image,pattern,feature_extractor):
+    """
+    runs feature_extractor model on both pattern and
+    image and returns the diffrence between thier outputs
+    """
+    assert(image.shape==pattern.shape)
+    if len(image.shape)==3:
+        image = np.array([image.astype(np.float)])
+    if len(pattern.shape)==3:
+        pattern = np.array([pattern.astype(np.float)])
+
+    i_feat=feature_extractor(image) # image should have 4 dims for using in model
+    p_feat=feature_extractor(pattern)
+    diff=keras.losses.cosine_similarity(
+    i_feat,
+    p_feat,
+    axis=3)
+    print(f"difference shape is {diff.shape}")
+    return diff.numpy()
 
 def crop(image, width=None, height=None):
 
@@ -121,12 +149,12 @@ def binary_threshold(image):
 def train(img,pattern,label):
     img,trans=crop(image=img)
 
-    
-    matched_pattern=histogram_matching(image=pattern,pattern=img) # deletes the cracks in the tile
+    # todo: pattern must be resized
+    matched_pattern=histogram_matching(image=pattern,pattern=img) # for using as the input to detection model
     rotated , angle = rotation_matching(img,pattern) 
 
     
-    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle)
+    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle) # function must get label 'shapes' list from the function input
     imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
 
     r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
@@ -176,10 +204,11 @@ def predict(img, pattern):
 
     img,trans=crop(image=img)
 
-    matched_img=histogram_matching(image=pattern,pattern=img) # deletes the cracks in the tile
+    # todo: pattern must be resized
+    matched_img=histogram_matching(image=pattern,pattern=img) # for using as the input to detection model
     rotated , angle = rotation_matching(img,pattern) 
 
-    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle)
+    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle) # delete parts related to label in this function
     imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
 
     r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)

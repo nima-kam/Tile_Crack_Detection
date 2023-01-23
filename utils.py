@@ -50,10 +50,10 @@ def crop_out(im, vertices, size=None):
 
 def load_vertices_from_json(json_file):
     vertices = []
-    json_file = constants['image_folder']+"/"+json_file
+    json_file = constants['image_folder']+"/"+json_file # the +"/"+ might cause bug in colab because of folder names 
     f = open(json_file)
     data = json.load(f)
-    shapes = data['shapes']
+    shapes = data['shapes'] # the read from file part must be deleted and the data be received from input
     for shape in shapes:
         points = shape['points']
         vertices.append(points)
@@ -350,3 +350,4 @@ def IOU(labels,box,threshold = 0.1):
         if IOU > threshold:
             return True
     return False
+
