@@ -14,7 +14,7 @@ from scipy import ndimage
 
 constants ={
     "image_size":(1200,1200),
-    "image_folder":"images/",
+    "image_folder":"./images/",
     "label_name":"test_img",
     "kernel_size":9,
     'pattern_name':"AYLIN.tif",
@@ -173,9 +173,9 @@ def predict(img, pattern):
     diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
     imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
 
-    showCountours(img,diff_open_bi_lbp_pattern,threshold=3500)
+    cracks=showCountours(rotated,diff_open_bi_lbp_pattern,threshold=3000)
 
-    return 
+    return cracks
 
 if __name__ == "__main__":
     """

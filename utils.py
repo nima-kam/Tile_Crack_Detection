@@ -24,11 +24,11 @@ def to_grayscale(im):
         output = im
     return output
 
-def opening(image,kernel):
-    
-    dialect=cv2.dilate(image,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
-    erode=cv2.erode(dialect,kernel=kernel,iterations=1,borderType=cv2.BORDER_REPLICATE)
+def opening(image,kernel):    
+    dialect=cv2.dilate(image,iterations=3,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
+    erode=cv2.erode(dialect,kernel=kernel,iterations=3,borderType=cv2.BORDER_REPLICATE)
     return(erode)
+
 def closing(image,kernel):
     
     erode=cv2.erode(image,kernel=kernel,iterations=1,borderType=cv2.BORDER_REPLICATE)    
@@ -261,21 +261,18 @@ def sliding_window(image,stride_width,stride_height,window_size=[50,50]):
 
 def showCountours(base_image , display_image, threshold = 4000):
     """
-    finds contours on 
+    Find contours on binary image
     """
     c , _ =cv2.findContours(image=display_image.astype(np.uint8), mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
     
     diff_open_bi_lbp_pattern_cp = base_image.copy().astype('float')
-    # imshow(diff_open_bi_lbp_pattern_cp/255,title = "img copy")
+    imshow(diff_open_bi_lbp_pattern_cp/255,title = "img copy")
     cracks =[]
     for i in range(len(c)):
-        ci=c[i]
-        # ci=cv2.approxPolyDP(ci,epsilon=10,closed=True) # reduce the number of points in contour
-
-        area = cv2.contourArea(ci)
+        area = cv2.contourArea(c[i])
         if threshold < area:
-            cracks.append(ci)
+            cracks.append(c[i])
             print("max_i = ", i,"\ncontours:",len(c))
-            diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (10,250,0),thickness= 2)
+            diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (0,255,0),thickness= 3)
     imshow(diff_open_bi_lbp_pattern_cp/255,title="countours")
-    return (diff_open_bi_lbp_pattern_cp/255)
+    return cracks
