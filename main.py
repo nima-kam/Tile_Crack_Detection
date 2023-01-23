@@ -12,10 +12,10 @@ from scipy import ndimage
 # enable pyplot interactive mode for showing images
 # plt.ion()
 
-constants ={
-    "image_size":(1200,1200),
+main_constants ={
+    "image_size":(1600,1600),
     "image_folder":"./images/",
-    "label_name":"test_img",
+    "label_name":"1644360063.82364",
     "kernel_size":9,
     'pattern_name':"AYLIN.tif",
     
@@ -143,7 +143,7 @@ def predict(img, pattern):
     matched_img=histogram_matching(image=img,pattern=pattern) # deletes the cracks in the tile
     rotated , angle = rotation_matching(img,pattern) 
 
-    rotated_transformed_labels = transform_labels(constants['label_name']+".json",transform=trans , angle=angle)
+    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle)
     imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
 
     r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
@@ -190,20 +190,21 @@ if __name__ == "__main__":
     """
     for testing the function result by runnig the program
     """
-    path = os.path.join(os.path.dirname(constants["image_folder"]),constants["label_name"])
-    img_path = path + ".jpg"
+    path = os.path.join(os.path.dirname(main_constants["image_folder"]),main_constants["label_name"])
     label_path = path + ".json"
-    print(path,f"\n{img_path},{label_path}")
-    img = cv2.imread(img_path)
-    # imshow(img)
-    # plt.show()
+    
 
     # open box label json file
     f = open(label_path, encoding="utf8")
     data = json.load(f)
     f.close()
-
-    pattern = cv2.imread(constants["pattern_name"])        
+    img_path = main_constants["image_folder"]+data["imagePath"]
+    img = cv2.imread(img_path)
+    print(path,f"\n{img_path},{label_path}")
+    imshow(img)
+    plt.show()
+    
+    pattern = cv2.imread("./Patterns/"+data["pattern"])      
     print(f"json label: {data}\n\nimage shape: {img.shape}\n\npattern shape: {pattern.shape}")
 
     predict(img,pattern)

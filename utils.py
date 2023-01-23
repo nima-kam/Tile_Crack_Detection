@@ -11,7 +11,7 @@ import json
 import math
 
 constants ={
-    "image_size":(1200,1200),
+    "image_size":(1600,1600),
     "image_folder":"images/",
     "kernel_size":9,
     "resized_dim":1600,
