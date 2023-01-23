@@ -14,7 +14,8 @@ constants ={
     "image_size":(1200,1200),
     "image_folder":"images/",
     "kernel_size":9,
-    "resized_dim":1600
+    "resized_dim":1600,
+    "model_size" : 50
 }
 def to_grayscale(im):
     if im.shape[2] >1:
@@ -276,3 +277,42 @@ def showCountours(base_image , display_image, threshold = 4000):
             diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (0,255,0),thickness= 3)
     imshow(diff_open_bi_lbp_pattern_cp/255,title="countours")
     return cracks
+
+def find_box(contour):
+    min_left = constants["resized_dim"]
+    min_top = constants["resized_dim"]
+    max_right = 0
+    max_down = 0
+
+    #print(f"contour : {contour}")
+    for point in contour:
+        #print(f"point of contour : {point}")
+        if point[0][0] > max_down:
+            max_down = point[0][0]
+        if point[0][0] < min_top:
+            min_top = point[0][0]
+        if point[0][1] > max_right:
+            max_right = point[0][1]
+        if point[0][1] < min_left:
+            min_left = point[0][1]
+    return [min_top,min_left,max_down,max_right]
+
+def get_proposals(contours):
+    boxes = []
+    for contour in contours:
+        box = find_box(contour)
+        if not(box[0] <=10 or box[1] <= 10 or box[2] >= 1590 or box[3] >= 1590):
+            boxes.append(box)
+    return boxes
+
+def show_proposals(image , boxes):
+    image_cp = image.copy()
+    for box in boxes:
+        image_cp = cv2.rectangle(image_cp, (box[0],box[1]), (box[2],box[3]), (10,255,0), 4)
+    return image_cp
+
+def get_resized_proposals(contours):
+    boxes = get_proposals(contours)
+    for box in boxes :
+        box = [box[0]/32 , box[1]/32 , box[2]/32 , box[3]/32]
+    return boxes

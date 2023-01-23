@@ -174,8 +174,11 @@ def predict(img, pattern):
     imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
 
     cracks=showCountours(rotated,diff_open_bi_lbp_pattern,threshold=3000)
+    proposals = get_proposals(cracks)
+    imshow(show_proposals(rotated/255,proposals),title = "proposals")
+    model_proposals = get_resized_proposals(cracks)
 
-    return cracks
+    return model_proposals
 
 if __name__ == "__main__":
     """
