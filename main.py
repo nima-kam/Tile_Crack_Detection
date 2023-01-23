@@ -184,6 +184,7 @@ if __name__ == "__main__":
     print(f"json label: {data}\n\nimage shape: {img.shape}\n\npattern shape: {pattern.shape}")
 
     predict(img,pattern)
+    
     #r_pattern = cv2.resize(pattern, img.shape[:2], interpolation = cv2.INTER_AREA)
     
     # test crop
@@ -247,15 +248,6 @@ if __name__ == "__main__":
     #         diff_open_bi_lbp_pattern_cp = cv2.drawContours(diff_open_bi_lbp_pattern_cp, [c[i]],-1, color = (0,255,0),thickness= 3)
     
     # imshow(diff_open_bi_lbp_pattern_cp/255,title="countours")
-
-
-
-
-
-
-
-
-
 
 
 
