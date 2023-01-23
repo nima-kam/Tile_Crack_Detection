@@ -9,14 +9,8 @@ from matplotlib import pyplot as plt
 from skimage.feature import local_binary_pattern
 import json
 import math
+from const import *
 
-constants ={
-    "image_size":(1600,1600),
-    "image_folder":"images/",
-    "kernel_size":9,
-    "resized_dim":1600,
-    "model_size" : 50
-}
 def to_grayscale(im):
     if im.shape[2] >1:
         # output = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)

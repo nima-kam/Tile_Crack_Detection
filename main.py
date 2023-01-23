@@ -6,20 +6,13 @@ from skimage.exposure import match_histograms
 from skimage.feature import local_binary_pattern
 import json
 import os
-from utils import *
 from scipy import ndimage
+from utils import *
+from const import *
 
 # enable pyplot interactive mode for showing images
 # plt.ion()
 
-main_constants ={
-    "image_size":(1600,1600),
-    "image_folder":"./images/",
-    "label_name":"1644360063.82364",
-    "kernel_size":9,
-    'pattern_name':"AYLIN.tif",
-    
-}
 
 def crop(image, width=None, height=None):
 
@@ -125,12 +118,55 @@ def binary_threshold(image):
     return None
 
 
-def train(image,pattern,label):
+def train(img,pattern,label):
     img,trans=crop(image=img)
 
     
-    matched_img=histogram_matching(image=img,pattern=pattern) # deletes the cracks in the tile
-    rotated = rotation_matching(img,pattern) 
+    matched_pattern=histogram_matching(image=pattern,pattern=img) # deletes the cracks in the tile
+    rotated , angle = rotation_matching(img,pattern) 
+
+    
+    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle)
+    imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
+
+    r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
+
+    gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
+    gs_pattern = to_grayscale(r_pattern.astype(np.uint8))
+    # bi_img=binary_threshold(rotated_img)
+    
+    med_blur_gs_rotated=median_blur(gs_rotated,3)
+    rotated_lbp = lbp(med_blur_gs_rotated)
+    imshow((rotated_lbp),False,"image lbp")
+
+    bi_rot_lbp=to_binary(rotated_lbp, adaptive=True,blockSize=11,C=0)
+    imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
+
+    morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
+    open_bi_lbp=closing(bi_rot_lbp,morph_kernel).astype(np.float32)
+    median_blur_open_bi_lbp = median_blur(open_bi_lbp,5)
+    imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
+
+    bin_r_pattern = to_binary(gs_pattern.astype(np.uint8),otsu=False,thresh=240).astype(np.float32)
+    reversed_bin_pattern = 1 - bin_r_pattern
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    reversed_bin_pattern = cv2.dilate(reversed_bin_pattern,iterations=8,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
+    imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
+
+    diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
+    imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
+
+    cracks=showCountours(rotated,diff_open_bi_lbp_pattern,threshold=3000)
+    proposals = get_proposals(cracks)
+    imshow(show_proposals(rotated/255,proposals),title = "proposals")
+    model_proposals = get_resized_proposals(cracks)
+
+    answers = []
+    for proposal in proposals:
+        if IOU(rotated_transformed_labels,proposal):
+            answers.append(proposal)
+    imshow(show_proposals(rotated/255,answers),title = "answers")
+
 
 def predict(img, pattern):
     """
@@ -140,7 +176,7 @@ def predict(img, pattern):
 
     img,trans=crop(image=img)
 
-    matched_img=histogram_matching(image=img,pattern=pattern) # deletes the cracks in the tile
+    matched_img=histogram_matching(image=pattern,pattern=img) # deletes the cracks in the tile
     rotated , angle = rotation_matching(img,pattern) 
 
     rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle)
