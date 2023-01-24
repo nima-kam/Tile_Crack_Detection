@@ -48,11 +48,8 @@ def crop_out(im, vertices, size=None):
 #             img[int(point[0]),int(point[1])] = 255
 #     return img
 
-def load_vertices_from_json(json_file):
+def load_vertices_from_json(data):
     vertices = []
-    json_file = constants['image_folder']+"/"+json_file # the +"/"+ might cause bug in colab because of folder names 
-    f = open(json_file)
-    data = json.load(f)
     shapes = data['shapes'] # the read from file part must be deleted and the data be received from input
     for shape in shapes:
         points = shape['points']
@@ -60,9 +57,9 @@ def load_vertices_from_json(json_file):
     return vertices
 
 
-def transform_vertices(json_file,transform):
+def transform_vertices(data,transform):
     print("transform_vertices:")
-    vertices = load_vertices_from_json(json_file)
+    vertices = load_vertices_from_json(data)
     transformed_vertices = []
     for points in vertices :
         shape = []
@@ -96,8 +93,8 @@ def rotate_vertices(angle,origin_point,vertices):
             point = rotate_point(origin_point,point,angle)
     return vertices
 
-def transform_labels(json_file ,transform ,angle):
-    transformed_vertices = transform_vertices(json_file,transform)
+def transform_labels(data ,transform ,angle):
+    transformed_vertices = transform_vertices(data,transform)
     rotated_transformed_vertices = rotate_vertices(angle,origin_point=(constants["resized_dim"]/2,constants["resized_dim"]/2),vertices=transformed_vertices)
     return rotated_transformed_vertices
 

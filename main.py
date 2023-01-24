@@ -8,6 +8,7 @@ import json
 import os
 from scipy import ndimage
 from tensorflow import keras
+import glob
 
 from utils import *
 from const import *
@@ -40,7 +41,7 @@ def find_similarity(image,pattern,feature_extractor):
     p_feat,
     axis=3)
     print(f"difference shape is {diff.shape}")
-    return diff.numpy()
+    return diff.numpy().squeeze() 
 
 def crop(image, width=None, height=None):
 
@@ -74,7 +75,7 @@ def crop(image, width=None, height=None):
         else:
             size = (width, height)
         crop_image,transform=crop_out(image,vertices=vertices,size=size)
-    imshow(crop_image,title="croped tile")    
+    #imshow(crop_image,title="croped tile")    
 
     return crop_image,transform
 
@@ -85,9 +86,9 @@ def histogram_matching(image,pattern):
                            multichannel=True)
 
     # visualize the result of histogram matching
-    plt.imshow(matched)
-    plt.title("histogram matching")
-    plt.show()
+    #plt.imshow(matched)
+    # plt.title("histogram matching")
+    # plt.show()
 
     return matched
 
@@ -137,8 +138,8 @@ def rotation_matching(image,pattern):
     #rotation angle in degree
     #image = ndimage.rotate(image, rotation_theta)
 
-    plt.imshow(rotated_image/255)
-    plt.show()
+    #plt.imshow(rotated_image/255)
+    #plt.show()
 
     return rotated_image,final_angle
 
@@ -146,54 +147,91 @@ def binary_threshold(image):
     return None
 
 
-def train(img,pattern,label):
+def model_input(img,pattern,label):
     img,trans=crop(image=img)
 
+    r_pattern = cv2.resize(pattern, img.shape[:2], interpolation = cv2.INTER_AREA) # todo : matched pattern is better than pattern ?
+
+    rotated , angle = rotation_matching(img,r_pattern) 
+
     # todo: pattern must be resized
-    matched_pattern=histogram_matching(image=pattern,pattern=img) # for using as the input to detection model
-    rotated , angle = rotation_matching(img,pattern) 
+    matched_pattern=histogram_matching(image=r_pattern,pattern=img) # for using as the input to detection model
 
-    
-    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle) # function must get label 'shapes' list from the function input
-    imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
+    rotated_transformed_labels = transform_labels(label,transform=trans , angle=angle) # function must get label 'shapes' list from the function input
+    #imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
 
-    r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
+    return (rotated , matched_pattern , rotated_transformed_labels)
 
+
+def find_img_proposals(rotated , r_pattern ):
     gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
     gs_pattern = to_grayscale(r_pattern.astype(np.uint8))
     # bi_img=binary_threshold(rotated_img)
     
     med_blur_gs_rotated=median_blur(gs_rotated,3)
     rotated_lbp = lbp(med_blur_gs_rotated)
-    imshow((rotated_lbp),False,"image lbp")
+    #imshow((rotated_lbp),False,"image lbp")
 
     bi_rot_lbp=to_binary(rotated_lbp, adaptive=True,blockSize=11,C=0)
-    imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
+    #imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
 
     morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
     open_bi_lbp=closing(bi_rot_lbp,morph_kernel).astype(np.float32)
     median_blur_open_bi_lbp = median_blur(open_bi_lbp,5)
-    imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
+    #imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
 
     bin_r_pattern = to_binary(gs_pattern.astype(np.uint8),otsu=False,thresh=240).astype(np.float32)
     reversed_bin_pattern = 1 - bin_r_pattern
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
     reversed_bin_pattern = cv2.dilate(reversed_bin_pattern,iterations=8,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
-    imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
+    #imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
 
     diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
-    imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
+    #imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
 
     cracks=showCountours(rotated,diff_open_bi_lbp_pattern,threshold=3000)
     proposals = get_proposals(cracks)
-    imshow(show_proposals(rotated/255,proposals),title = "proposals")
+    #imshow(show_proposals(rotated/255,proposals),title = "proposals")
     model_proposals = get_resized_proposals(cracks)
 
+    return model_proposals
+
+def train(img,pattern,label):
+
+    (rotated , r_pattern , rotated_transformed_labels) = model_input(img,pattern,label)
+    model_proposals = find_img_proposals(rotated,r_pattern)
+    norm_rotated = rotated.astype(np.float32)/255
+    norm_pattern = r_pattern.astype(np.float32)/255
+    diff_img = find_similarity(norm_rotated,norm_pattern)
     answers = []
-    for proposal in proposals:
-        if IOU(rotated_transformed_labels,proposal):
-            answers.append(proposal)
-    imshow(show_proposals(rotated/255,answers),title = "answers")
+    for propsal in model_proposals:
+        max_diff = np.max(diff_img[propsal[0]:propsal[2],propsal[1]:propsal[3]])
+        if max_diff > 0 :
+            answers.append(propsal*32)
+
+    counter = 0
+    for answer in answers:
+        if(IOU(rotated_transformed_labels,answer)):
+            counter += 1
+    if len(answers) > 0:
+        percision = counter / len(answers)
+    else:
+        percision = 1
+
+    return  percision
+
+def accuracy():
+    sum = 0
+    json_files = glob.glob(constants['image_folder']+'*.json')
+    for file in json_files:
+        f = open(file, encoding="utf8")
+        data = json.load(f)
+        f.close()
+        img_path = main_constants["image_folder"]+data["imagePath"]
+        img = cv2.imread(img_path)
+        pattern = cv2.imread("./Patterns/"+data["pattern"]) 
+        sum += train(img,pattern,data)
+    return sum/len(json_files)
 
 
 def predict(img, pattern):
@@ -204,75 +242,49 @@ def predict(img, pattern):
 
     img,trans=crop(image=img)
 
+    r_pattern = cv2.resize(pattern, img.shape[:2], interpolation = cv2.INTER_AREA) # todo : matched pattern is better than pattern ?
+
+    rotated , angle = rotation_matching(img,r_pattern) 
+
     # todo: pattern must be resized
-    matched_img=histogram_matching(image=pattern,pattern=img) # for using as the input to detection model
-    rotated , angle = rotation_matching(img,pattern) 
+    matched_pattern=histogram_matching(image=r_pattern,pattern=img) # for using as the input to detection model
+    r_pattern = matched_pattern
 
-    rotated_transformed_labels = transform_labels(main_constants['label_name']+".json",transform=trans , angle=angle) # delete parts related to label in this function
-    imshow(show_transfered_labels(rotated.astype(np.uint8),rotated_transformed_labels),title="transformed labels")
-
-    r_pattern = cv2.resize(pattern, rotated.shape[:2], interpolation = cv2.INTER_AREA)
-
-    gs_rotated = to_grayscale(rotated.astype(np.uint8)) 
-    gs_pattern = to_grayscale(r_pattern.astype(np.uint8))
-    # bi_img=binary_threshold(rotated_img)
-    
-    med_blur_gs_rotated=median_blur(gs_rotated,3)
-    rotated_lbp = lbp(med_blur_gs_rotated)
-    imshow((rotated_lbp),False,"image lbp")
-
-    bi_rot_lbp=to_binary(rotated_lbp, adaptive=True,blockSize=11,C=0)
-    imshow(bi_rot_lbp,show=False,title="Image binary lbp ")
-
-    morph_kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
-    open_bi_lbp=closing(bi_rot_lbp,morph_kernel).astype(np.float32)
-    median_blur_open_bi_lbp = median_blur(open_bi_lbp,5)
-    imshow(median_blur_open_bi_lbp,show=False,title="Image open binary lbp ")
-
-    bin_r_pattern = to_binary(gs_pattern.astype(np.uint8),otsu=False,thresh=240).astype(np.float32)
-    reversed_bin_pattern = 1 - bin_r_pattern
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
-    reversed_bin_pattern = cv2.dilate(reversed_bin_pattern,iterations=8,kernel=kernel,borderType=cv2.BORDER_REPLICATE)
-    imshow(reversed_bin_pattern,False,title="reversed_bin_pattern pattern")
-
-    diff_open_bi_lbp_pattern =median_blur_open_bi_lbp - reversed_bin_pattern 
-    imshow(diff_open_bi_lbp_pattern,title="difference between bin image and pattern")
-
-    cracks=showCountours(rotated,diff_open_bi_lbp_pattern,threshold=3000)
-    proposals = get_proposals(cracks)
-    imshow(show_proposals(rotated/255,proposals),title = "proposals")
-    model_proposals = get_resized_proposals(cracks)
-
+    model_proposals = find_img_proposals(rotated,r_pattern)
+    norm_rotated = rotated.astype(np.float32)/255
+    norm_pattern = r_pattern.astype(np.float32)/255
+    diff_img = find_similarity(norm_rotated,norm_pattern)
     answers = []
-    for proposal in proposals:
-        if IOU(rotated_transformed_labels,proposal):
-            answers.append(proposal)
-    imshow(show_proposals(rotated/255,answers),title = "answers")
-
-    return model_proposals
+    for propsal in model_proposals:
+        max_diff = np.max(diff_img[propsal[0]:propsal[2],propsal[1]:propsal[3]])
+        if max_diff > 0 :
+            answers.append(propsal*32)
+    
+    
+    return answers
 
 if __name__ == "__main__":
     """
     for testing the function result by runnig the program
     """
-    path = os.path.join(os.path.dirname(main_constants["image_folder"]),main_constants["label_name"])
-    label_path = path + ".json"
+    # path = os.path.join(os.path.dirname(main_constants["image_folder"]),main_constants["label_name"])
+    # label_path = path + ".json"
     
 
-    # open box label json file
-    f = open(label_path, encoding="utf8")
-    data = json.load(f)
-    f.close()
-    img_path = main_constants["image_folder"]+data["imagePath"]
-    img = cv2.imread(img_path)
-    print(path,f"\n{img_path},{label_path}")
-    imshow(img)
-    plt.show()
+    # # open box label json file
+    # f = open(label_path, encoding="utf8")
+    # data = json.load(f)
+    # f.close()
+    # img_path = main_constants["image_folder"]+data["imagePath"]
+    # img = cv2.imread(img_path)
+    # print(path,f"\n{img_path},{label_path}")
+    # imshow(img)
+    # plt.show()
     
-    pattern = cv2.imread("./Patterns/"+data["pattern"])      
-    print(f"json label: {data}\n\nimage shape: {img.shape}\n\npattern shape: {pattern.shape}")
+    # pattern = cv2.imread("./Patterns/"+data["pattern"])      
+    # print(f"json label: {data}\n\nimage shape: {img.shape}\n\npattern shape: {pattern.shape}")
 
-    predict(img,pattern)
+    print(f'accuracy : {accuracy()}')
     
     #r_pattern = cv2.resize(pattern, img.shape[:2], interpolation = cv2.INTER_AREA)
     
